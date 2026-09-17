@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dayasri.sys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0a;
+    --bg2:#050805;
+    --fg:#33ff55;
+    --fg-dim:#1c8f33;
+    --accent:#7dffa0;
+    --glow: 0 0 6px rgba(51,255,85,.65), 0 0 14px rgba(51,255,85,.25);
+    --scan-op: .10;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  html,body{
+    height:100%;
+    background: var(--bg2);
+  }
+
+  body{
+    font-family:'Share Tech Mono', monospace;
+    color: var(--fg);
+    background: var(--bg);
+    min-height:100vh;
+    overflow-x:hidden;
+    transition: background .5s ease, color .5s ease;
+    position:relative;
+  }
+
+  /* ---------- CRT SCREEN WRAPPER ---------- */
+  .crt{
+    position:relative;
+    min-height:100vh;
+    padding: 0 0 4rem;
+  }
+
+  .crt::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 1px,
+      rgba(0,0,0,var(--scan-op)) 2px,
+      rgba(0,0,0,var(--scan-op)) 3px
+    );
+    z-index: 40;
+    mix-blend-mode: multiply;
+  }
+
+  .crt::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
+    z-index: 41;
+  }
+
+  .flicker{
+    animation: flicker 6.5s infinite;
+  }
+  @keyframes flicker{
+    0%,19%,21%,23%,55%,57%,100%{ opacity:1; }
+    20%{ opacity:.86; }
+    22%{ opacity:.94; }
+    56%{ opacity:.9; }
+  }
+
+  ::selection{ background: var(--fg); color: var(--bg); }
+
+  a{ color: var(--accent); text-decoration:none; }
+  a:hover, a:focus-visible{ text-decoration: underline; }
+
+  /* ---------- BOOT SCREEN ---------- */
+  #boot{
+    position:fixed;
+    inset:0;
+    background:#000;
+    color: var(--fg);
+    font-family:'Share Tech Mono', monospace;
+    z-index:100;
+    padding: 6vh 6vw;
+    font-size: clamp(12px, 1.6vw, 16px);
+    line-height:1.6;
+    white-space: pre-wrap;
+  }
+  #boot .cursor{
+    display:inline-block;
+    width:.55em; height:1em;
+    background: var(--fg);
+    vertical-align: -.15em;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+  #boot.hide{ display:none; }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position: sticky;
+    top:0;
+    z-index: 30;
+    display:flex;
+    flex-wrap:wrap;
+    gap: .25rem 0;
+    align-items:center;
+    justify-content:space-between;
+    padding: .9rem 1.25rem;
+    background: linear-gradient(var(--bg) 85%, transparent);
+    border-bottom: 1px solid var(--fg-dim);
+    backdrop-filter: blur(1px);
+  }
+
+  .nav-brand{
+    font-family:'VT323', monospace;
+    font-size: 1.6rem;
+    letter-spacing: .04em;
+    color: var(--fg);
+    text-shadow: var(--glow);
+  }
+  .nav-brand .blk{ color: var(--fg-dim); }
+
+  .nav-links{
+    display:flex;
+    gap: .35rem;
+    flex-wrap:wrap;
+    font-size: .82rem;
+  }
+  .nav-links a{
+    color: var(--fg-dim);
+    padding: .3rem .55rem;
+    border: 1px solid transparent;
+  }
+  .nav-links a:hover, .nav-links a:focus-visible{
+    color: var(--fg);
+    border-color: var(--fg-dim);
+    text-decoration:none;
+    text-shadow: var(--glow);
+  }
+  .nav-links a::before{ content:"["; color: var(--fg-dim); margin-right:.15em;}
+  .nav-links a::after{ content:"]"; color: var(--fg-dim); margin-left:.15em;}
+
+  #theme-toggle{
+    font-family:'Share Tech Mono', monospace;
+    background: transparent;
+    border: 1px solid var(--fg-dim);
+    color: var(--fg);
+    padding: .3rem .6rem;
+    font-size: .78rem;
+    cursor:pointer;
+    margin-left: .5rem;
+  }
+  #theme-toggle:hover{ background: var(--fg-dim); color: var(--bg); }
+
+  /* ---------- LAYOUT ---------- */
+  main{
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 1.4rem;
+  }
+
+  section{
+    padding: 4.5rem 0 2rem;
+    border-bottom: none;
+    display:none;
+    min-height: 60vh;
+  }
+  section.active{ display:block; }
+
+  .nav-links a.active{
+    color: var(--fg);
+    border-color: var(--fg-dim);
+    text-shadow: var(--glow);
+  }
+
+  .tag{
+    font-size:.75rem;
+    color: var(--fg-dim);
+    letter-spacing:.08em;
+  }
+  .tag::before{ content:"# "; }
+
+  h1,h2{
+    font-family:'VT323', monospace;
+    font-weight:400;
+    line-height:1.05;
+    text-shadow: var(--glow);
+  }
+
+  h1{ font-size: clamp(2.2rem, 8vw, 3.6rem); margin:.3rem 0 .5rem; }
+  h2{ font-size: clamp(1.6rem, 6vw, 2.1rem); margin-bottom: 1rem; }
+
+  p{ line-height:1.75; margin-bottom: 1rem; font-size: .98rem; color: var(--fg); }
+  .dim{ color: var(--fg-dim); }
+
+  .prompt::before{
+    content:"dayasri@world:~$ ";
+    color: var(--fg-dim);
+  }
+
+  #typed-line{
+    font-family:'VT323', monospace;
+    font-size: clamp(1.8rem, 7vw, 3rem);
+  }
+  #typed-line .cursor{
+    display:inline-block;
+    width:.5em;
+    background: var(--fg);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  .hero-sub{ max-width: 60ch; color: var(--fg-dim); }
+
+  /* thoughts / entries */
+  .entry{ margin-bottom: 1.6rem; padding-left: 1rem; border-left: 2px solid var(--fg-dim); }
+  .entry .meta{ font-size:.75rem; color: var(--fg-dim); margin-bottom:.35rem; }
+
+  ul.plain{ list-style:none; padding:0; }
+  ul.plain li{ margin-bottom:.6rem; padding-left: 1.1em; position:relative; }
+  ul.plain li::before{ content:">"; position:absolute; left:0; color: var(--fg-dim); }
+
+  /* ---------- CARD GRID (thoughts, random, etc.) ---------- */
+  .card-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .item-card{
+    display:block;
+    width:100%;
+    text-align:left;
+    font-family:'Share Tech Mono', monospace;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--fg-dim);
+    padding: 1rem;
+    cursor:pointer;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+  }
+  .item-card:hover, .item-card:focus-visible{
+    border-color: var(--fg);
+    box-shadow: var(--glow);
+    transform: translateY(-2px);
+  }
+  .item-card .meta{ font-size:.72rem; color: var(--fg-dim); margin-bottom:.5rem; }
+  .item-card h3{
+    font-family:'VT323', monospace;
+    font-size: 1.3rem;
+    font-weight:400;
+    margin-bottom:.4rem;
+  }
+  .item-card p{
+    font-size:.85rem;
+    color: var(--fg-dim);
+    margin-bottom:0;
+    line-height:1.55;
+  }
+  .item-card .read-more{ font-size:.72rem; color: var(--accent); margin-top:.6rem; display:block; }
+
+  .detail-view{ margin-top: 1rem; }
+  .detail-view[hidden]{ display:none; }
+  .back-btn{
+    font-family:'Share Tech Mono', monospace;
+    background: transparent;
+    border: 1px solid var(--fg-dim);
+    color: var(--fg);
+    padding: .4rem .7rem;
+    font-size: .78rem;
+    cursor:pointer;
+    margin-bottom: 1.4rem;
+  }
+  .back-btn:hover{ background: var(--fg-dim); color: var(--bg); }
+  .detail-view .meta{ font-size:.75rem; color: var(--fg-dim); margin-bottom:.4rem; }
+  .detail-view h3{
+    font-family:'VT323', monospace;
+    font-size: clamp(1.6rem, 6vw, 2.1rem);
+    font-weight:400;
+    margin-bottom: 1rem;
+    text-shadow: var(--glow);
+  }
+
+  .page-footer{
+    margin-top: 2.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px dashed var(--fg-dim);
+    font-size: .8rem;
+    font-style: italic;
+    color: var(--fg-dim);
+  }
+
+  .connect-box{
+    border: 1px solid var(--fg-dim);
+    padding: 1.4rem;
+    margin-top: 1rem;
+  }
+  .connect-box a{
+    font-size: 1.05rem;
+    word-break: break-all;
+  }
+
+  footer{
+    text-align:center;
+    padding: 2rem 1rem 3rem;
+    font-size: .75rem;
+    color: var(--fg-dim);
+  }
+
+  @media (max-width: 560px){
+    nav{ flex-direction:column; align-items:flex-start; }
+    .nav-links{ font-size:.76rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .flicker, #boot .cursor, #typed-line .cursor{ animation: none; }
+  }
+</style>
+</head>
+<body class="flicker">
+
+<div id="boot">BOOT SEQUENCE // DAYASRI-OS v1.0
+<span id="boot-text"></span><span class="cursor"></span>
+</div>
+
+<div class="crt">
+
+  <nav>
+    <div class="nav-brand"><span class="blk">/</span>dayasri<span class="blk">.sys</span></div>
+    <div class="nav-links">
+      <a href="#home">home</a>
+      <a href="#about">about</a>
+      <a href="#thoughts">thoughts</a>
+      <a href="#tech">tech</a>
+      <a href="#random">random</a>
+      <a href="#connect">connect</a>
+      <button id="theme-toggle" aria-label="change color theme">theme: <span id="theme-name">phosphor</span></button>
+    </div>
+  </nav>
+
+  <main>
+
+    <section id="home">
+      <p class="tag">whoami</p>
+      <h1 id="typed-line"><span id="typed-text"></span><span class="cursor">&nbsp;</span></h1>
+      <p class="hero-sub">this isn't a portfolio. it's closer to a terminal window into my head &mdash; how i read the world outside, what i'm noticing, what i think is actually going on with jobs, tech and everyone trying to figure it out.</p>
+      <p class="dim prompt">explore the nav above_</p>
+      <p class="page-footer">no resume attached. just a person thinking out loud.</p>
+    </section>
+
+    <section id="about">
+      <p class="tag">about</p>
+      <h2>not a resume, just me</h2>
+      <p>I'm Dayasri. I'm not putting this up to look impressive &mdash; there are enough polished portfolio sites already. This one's for the unpolished part: what I notice when I look around, what I'm learning, what confuses me about how things work right now.</p>
+      <p>I like old computers more than I probably should. There's something honest about a green cursor blinking on a black screen, waiting for you to type something real instead of scrolling past it.</p>
+      <p class="dim">edit this section &mdash; replace with your actual story, interests, whatever you want people to know without calling it a "bio."</p>
+      <p class="page-footer">still compiling. check back for the next build.</p>
+    </section>
+
+    <section id="thoughts">
+      <p class="tag">thoughts</p>
+      <h2>things i'm sitting with</h2>
+      <p class="dim">grab a cup of coffee &#9749; and see if any of these match what's in your head too. click a card to read it.</p>
+
+      <div id="thoughts-list" class="card-grid"></div>
+
+      <div id="thoughts-detail" class="detail-view" hidden>
+        <button class="back-btn" data-back="thoughts">&larr; back to all thoughts</button>
+        <div class="meta" data-role="meta"></div>
+        <h3 data-role="title"></h3>
+        <p data-role="body"></p>
+      </div>
+
+      <p class="page-footer">refill the coffee, there's always one more entry brewing.</p>
+    </section>
+
+    <section id="tech">
+      <p class="tag">tech &amp; the job hunt</p>
+      <h2>can freshers still get in?</h2>
+      <p class="dim">notes from the job hunt, one card at a time. click a card to read it.</p>
+
+      <div id="tech-list" class="card-grid"></div>
+
+      <div id="tech-detail" class="detail-view" hidden>
+        <button class="back-btn" data-back="tech">&larr; back to tech</button>
+        <div class="meta" data-role="meta"></div>
+        <h3 data-role="title"></h3>
+        <p data-role="body"></p>
+      </div>
+
+      <p class="page-footer">job market update, compiled from a fresher's point of view &mdash; not HR.</p>
+    </section>
+
+    <section id="random">
+      <p class="tag">random</p>
+      <h2>whatever didn't fit elsewhere</h2>
+      <p class="dim">the junk drawer of the site. click a card, see what's inside.</p>
+
+      <div id="random-list" class="card-grid"></div>
+
+      <div id="random-detail" class="detail-view" hidden>
+        <button class="back-btn" data-back="random">&larr; back to random</button>
+        <div class="meta" data-role="meta"></div>
+        <h3 data-role="title"></h3>
+        <p data-role="body"></p>
+      </div>
+
+      <p class="page-footer">warning: contents may not be organized, on purpose.</p>
+    </section>
+
+    <section id="connect">
+      <p class="tag">connect</p>
+      <h2>let's talk</h2>
+      <p>If something here resonated, or you just want to say hi &mdash; my terminal's open.</p>
+      <div class="connect-box">
+        <p class="prompt" style="margin-bottom:.6rem;">send mail</p>
+        <a href="mailto:dayasri90@gmail.com">dayasri90@gmail.com</a>
+      </div>
+      <p class="page-footer">reply time: usually faster than a dial-up connection.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    dayasri.sys &mdash; built with html, css &amp; js &mdash; no backend, no tracking, just vibes<br>
+    press the theme button up top if <span id="footer-theme">phosphor</span> isn't your color
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- BOOT SEQUENCE ---------------- */
+  var bootLines = [
+    "",
+    "> checking memory ......... OK",
+    "> loading personality.sys . OK",
+    "> mounting /thoughts ...... OK",
+    "> mounting /tech .......... OK",
+    "> initializing crt display  OK",
+    "",
+    "> welcome."
+  ];
+  var bootTextEl = document.getElementById('boot-text');
+  var bootEl = document.getElementById('boot');
+  var fullBoot = bootLines.join("\n");
+  var bi = 0;
+
+  function typeBoot(){
+    if(bi <= fullBoot.length){
+      bootTextEl.textContent = fullBoot.slice(0, bi);
+      bi += 2;
+      setTimeout(typeBoot, 12);
+    } else {
+      setTimeout(function(){
+        bootEl.classList.add('hide');
+        startHeroTyping();
+      }, 500);
+    }
+  }
+  // Respect reduced motion: skip boot animation delay
+  var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(prefersReduced){
+    bootEl.classList.add('hide');
+    startHeroTyping();
+  } else {
+    setTimeout(typeBoot, 300);
+  }
+
+  /* ---------------- HERO TYPEWRITER ---------------- */
+  function startHeroTyping(){
+    var target = "hi, i am dayasri.";
+    var el = document.getElementById('typed-text');
+    var i = 0;
+    function step(){
+      if(i <= target.length){
+        el.textContent = target.slice(0, i);
+        i++;
+        setTimeout(step, 90);
+      }
+    }
+    step();
+  }
+
+  /* ---------------- CARD SECTIONS (thoughts, random) ---------------- */
+  var cardData = {
+    thoughts: [
+      {
+        date: "entry_01",
+        title: "the slide-deck self",
+        excerpt: "Everyone's optimizing for the version of themselves that looks good on a slide...",
+        body: "Everyone's optimizing for the version of themselves that looks good on a slide. I keep wondering what happens to the version that doesn't fit on one."
+      },
+      {
+        date: "entry_02",
+        title: "room vs. feed",
+        excerpt: "The internet used to feel like a room you walked into. Now it feels like...",
+        body: "The internet used to feel like a room you walked into. Now it feels like a feed that walks into you. I miss choosing what I look at."
+      },
+      {
+        date: "entry_03",
+        title: "log file, not a highlight reel",
+        excerpt: "This section is meant to grow over time, like a log file...",
+        body: "Replace these with your real thoughts &mdash; short, unfiltered, dated if you want. This section is meant to grow over time, like a log file. Add a new card here any time you have something on your mind."
+      }
+    ],
+    tech: [
+      {
+        date: "note_01",
+        title: "the door has moved",
+        excerpt: "Short answer: yes, but the door has moved. It's not just 'tech jobs' anymore...",
+        body: "Short answer: yes, but the door has moved. It's not just \"tech jobs\" anymore &mdash; support, operations, content, sales, analytics, design, all of it now expects some comfort with tools and systems. Being \"non-tech\" doesn't mean being untouched by tech anymore."
+      },
+      {
+        date: "note_02",
+        title: "what's actually opening up for freshers",
+        excerpt: "Tech: QA/testing, technical support, junior dev roles at smaller product companies...",
+        body: "<strong>Tech:</strong> QA/testing, technical support, junior dev roles at smaller product companies, data annotation and analytics, no-code/low-code building.<br><br><strong>Non-tech:</strong> operations, customer success, content and community, sales development &mdash; roles that reward clear communication and fast learning over a specific degree.<br><br><strong>The overlap:</strong> anyone who can use AI tools well, write clearly, and actually finish things is quietly ahead of people who only have the certificate."
+      },
+      {
+        date: "note_03",
+        title: "it's not about the branch on your degree",
+        excerpt: "What I keep coming back to: it's less about having the 'right' branch...",
+        body: "What I keep coming back to: it's less about having the \"right\" branch on your degree and more about being someone who ships small proofs of what you can do &mdash; a project, a write-up, a fixed bug, a real example. This site is basically that, for me."
+      },
+      {
+        date: "note_04",
+        title: "[next entry]",
+        excerpt: "[fill this in]",
+        body: "[fill this in &mdash; add a new object to the tech array in the script with date, title, excerpt and body to add another card here.]"
+      }
+    ],
+    random: [
+      {
+        date: "note",
+        title: "favorite sound",
+        excerpt: "A dial-up modem connecting. Chaotic and hopeful at the same time...",
+        body: "A dial-up modem connecting. Chaotic and hopeful at the same time &mdash; that screech basically meant 'the whole world is about to open up.'"
+      },
+      {
+        date: "note",
+        title: "currently obsessed with",
+        excerpt: "[fill this in]",
+        body: "[fill this in &mdash; swap this card's title, excerpt, and body for whatever you're into right now.]"
+      },
+      {
+        date: "note",
+        title: "underrated old-tech fact",
+        excerpt: "[fill this in]",
+        body: "[fill this in with a fact you find genuinely interesting about old computers, software, or the early internet.]"
+      },
+      {
+        date: "note",
+        title: "an open question",
+        excerpt: "[fill this in]",
+        body: "[fill this in with something you don't have an answer to yet &mdash; that's allowed here.]"
+      }
+    ]
+  };
+
+  function escapeHTML(str){
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function initCardSection(key){
+    var items = cardData[key];
+    var listEl = document.getElementById(key + '-list');
+    var detailEl = document.getElementById(key + '-detail');
+    if(!listEl || !detailEl) return;
+
+    listEl.innerHTML = items.map(function(item, i){
+      return '<div class="item-card" tabindex="0" role="button" data-index="' + i + '" aria-label="open: ' + escapeHTML(item.title) + '">' +
+               '<div class="meta">' + escapeHTML(item.date) + '</div>' +
+               '<h3>' + escapeHTML(item.title) + '</h3>' +
+               '<p>' + escapeHTML(item.excerpt) + '</p>' +
+               '<span class="read-more">click to read &rarr;</span>' +
+             '</div>';
+    }).join('');
+
+    function openItem(i){
+      var item = items[i];
+      detailEl.querySelector('[data-role="meta"]').textContent = item.date;
+      detailEl.querySelector('[data-role="title"]').textContent = item.title;
+      detailEl.querySelector('[data-role="body"]').innerHTML = item.body;
+      listEl.style.display = 'none';
+      detailEl.hidden = false;
+    }
+
+    listEl.addEventListener('click', function(e){
+      var card = e.target.closest('.item-card');
+      if(card) openItem(parseInt(card.getAttribute('data-index'), 10));
+    });
+    listEl.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){
+        var card = e.target.closest('.item-card');
+        if(card){
+          e.preventDefault();
+          openItem(parseInt(card.getAttribute('data-index'), 10));
+        }
+      }
+    });
+
+    var backBtn = detailEl.querySelector('.back-btn');
+    backBtn.addEventListener('click', function(){
+      detailEl.hidden = true;
+      listEl.style.display = '';
+    });
+  }
+
+  initCardSection('thoughts');
+  initCardSection('tech');
+  initCardSection('random');
+
+  /* ---------------- PAGE ROUTER (no full scroll, no leaving the page) ---------------- */
+  var pages = ['home','about','thoughts','tech','random','connect'];
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-links a'));
+
+  function showPage(id){
+    if(pages.indexOf(id) === -1) id = 'home';
+    pages.forEach(function(p){
+      var sec = document.getElementById(p);
+      if(sec) sec.classList.toggle('active', p === id);
+    });
+    navLinks.forEach(function(a){
+      var target = a.getAttribute('href').replace('#','');
+      a.classList.toggle('active', target === id);
+    });
+    window.scrollTo(0,0);
+  }
+
+  navLinks.forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var id = a.getAttribute('href').replace('#','');
+      history.pushState(null, '', '#' + id);
+      showPage(id);
+    });
+  });
+
+  window.addEventListener('popstate', function(){
+    var id = location.hash.replace('#','') || 'home';
+    showPage(id);
+  });
+
+  showPage(location.hash ? location.hash.replace('#','') : 'home');
+
+  /* ---------------- THEME TOGGLE ---------------- */
+  var themes = [
+    { name: "phosphor",  bg:"#0a0f0a", bg2:"#050805", fg:"#33ff55", dim:"#1c8f33", accent:"#7dffa0", glow:"rgba(51,255,85,.65)" },
+    { name: "amber",     bg:"#100b05", bg2:"#0a0603", fg:"#ffb400", dim:"#8f5f10", accent:"#ffd166", glow:"rgba(255,180,0,.6)" },
+    { name: "ice",       bg:"#020a12", bg2:"#01060b", fg:"#4fd6ff", dim:"#1c6f8f", accent:"#a9ecff", glow:"rgba(79,214,255,.6)" },
+    { name: "blood",     bg:"#0d0202", bg2:"#080101", fg:"#ff4d4d", dim:"#8f1c1c", accent:"#ff9999", glow:"rgba(255,77,77,.6)" },
+    { name: "paper",     bg:"#111111", bg2:"#0a0a0a", fg:"#e8e8e8", dim:"#7a7a7a", accent:"#ffffff", glow:"rgba(232,232,232,.5)" },
+    { name: "violet",    bg:"#0a0714", bg2:"#05030b", fg:"#c792ff", dim:"#6a4a8f", accent:"#e5c8ff", glow:"rgba(199,146,255,.6)" }
+  ];
+  var idx = 0;
+  var root = document.documentElement;
+  var themeNameEl = document.getElementById('theme-name');
+  var footerThemeEl = document.getElementById('footer-theme');
+
+  function applyTheme(t){
+    root.style.setProperty('--bg', t.bg);
+    root.style.setProperty('--bg2', t.bg2);
+    root.style.setProperty('--fg', t.fg);
+    root.style.setProperty('--fg-dim', t.dim);
+    root.style.setProperty('--accent', t.accent);
+    root.style.setProperty('--glow', '0 0 6px ' + t.glow + ', 0 0 14px ' + t.glow.replace(/[\d.]+\)$/, '.25)'));
+    themeNameEl.textContent = t.name;
+    if(footerThemeEl) footerThemeEl.textContent = t.name;
+  }
+
+  applyTheme(themes[0]);
+
+  document.getElementById('theme-toggle').addEventListener('click', function(){
+    idx = (idx + 1) % themes.length;
+    applyTheme(themes[idx]);
+  });
+
+})();
+</script>
+
+</body>
+</html>
